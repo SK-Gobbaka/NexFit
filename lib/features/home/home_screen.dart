@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 import '../../models/clothing.dart';
 import '../../models/outfit.dart';
 import '../../widgets/bottom_nav_bar.dart';
@@ -157,9 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Toggle save state
               });
             },
-            onGenerateAgain: () {
-              // Generate new outfit
-            },
+            onGenerateAgain: () => context.go('/outfit-generator'),
           ),
         ),
       ],

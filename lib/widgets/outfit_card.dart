@@ -10,6 +10,7 @@ class OutfitCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onSave;
   final VoidCallback? onGenerateAgain;
+  final bool showActions;
 
   const OutfitCard({
     super.key,
@@ -18,6 +19,7 @@ class OutfitCard extends StatelessWidget {
     this.onTap,
     this.onSave,
     this.onGenerateAgain,
+    this.showActions = true,
   });
 
   @override
@@ -138,43 +140,44 @@ class OutfitCard extends StatelessWidget {
             ),
           ),
           // Action Buttons
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: onGenerateAgain,
-                    icon: const Icon(Icons.refresh_rounded, size: 20),
-                    label: const Text('Generate Again'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+          if (showActions)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: onGenerateAgain,
+                      icon: const Icon(Icons.refresh_rounded, size: 20),
+                      label: const Text('Generate Again'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: onSave,
-                    icon: Icon(
-                      outfit.isSaved ? Icons.bookmark : Icons.bookmark_border,
-                      size: 20,
-                    ),
-                    label: Text(outfit.isSaved ? 'Saved' : 'Save Fit'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: onSave,
+                      icon: Icon(
+                        outfit.isSaved ? Icons.bookmark : Icons.bookmark_border,
+                        size: 20,
+                      ),
+                      label: Text(outfit.isSaved ? 'Saved' : 'Save Fit'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );
