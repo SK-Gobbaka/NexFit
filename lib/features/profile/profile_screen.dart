@@ -1,6 +1,10 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../widgets/bottom_nav_bar.dart';
+import '../../services/outfit_service.dart';
+import '../../models/outfit.dart';
+import '../../models/clothing.dart';
 import '../../utils/constants.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -8,6 +12,10 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Read live saved outfits and clothing mapping from singleton service
+    final savedOutfits = OutfitService.instance.savedOutfits;
+    final clothingMap = OutfitService.instance.outfitClothingMap;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -22,9 +30,9 @@ class ProfileScreen extends StatelessWidget {
                   children: [
                     _buildProfileCard(),
                     const SizedBox(height: 24),
-                    _buildStatsSection(),
+                    _buildStatsSection(savedOutfits.length),
                     const SizedBox(height: 24),
-                    _buildSavedOutfitsSection(),
+                    _buildSavedOutfitsSection(savedOutfits, clothingMap),
                     const SizedBox(height: 24),
                     _buildSettingsSection(),
                   ],
@@ -137,7 +145,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatsSection() {
+  Widget _buildStatsSection(int savedCount) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -158,7 +166,7 @@ class ProfileScreen extends StatelessWidget {
           _buildVerticalDivider(),
           _buildStatItem('12', 'Outfits'),
           _buildVerticalDivider(),
-          _buildStatItem('8', 'Saved'),
+          _buildStatItem('$savedCount', 'Saved'), // FIXED: Live saved outfits count
         ],
       ),
     );
@@ -195,7 +203,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSavedOutfitsSection() {
+  Widget _buildSavedOutfitsSection(List<Outfit> savedOutfits, Map<String, List<Clothing>> clothingMap) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -208,34 +216,131 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          height: 120,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: 3,
-            itemBuilder: (context, index) {
-              return Container(
-                width: 100,
-                margin: const EdgeInsets.only(right: 12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(12),
+        if (savedOutfits.isEmpty)
+          // FIXED: Elegant Empty State for favorites list
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.bookmark_outline_rounded,
+                  color: Colors.grey.shade400,
+                  size: 44,
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: CachedNetworkImage(
-                    imageUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=200',
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => const Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                    errorWidget: (context, url, error) => const Icon(Icons.error),
+                const SizedBox(height: 12),
+                Text(
+                  'No saved outfits yet',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade700,
                   ),
                 ),
-              );
-            },
+                const SizedBox(height: 6),
+                Text(
+                  'Swipe right or bookmark outfits to see your favorite fits here!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade500,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          // FIXED: Beautiful grid view showing live saved outfit clothing items
+          SizedBox(
+            height: 140,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: savedOutfits.length,
+              itemBuilder: (context, index) {
+                final outfit = savedOutfits[index];
+                final clothes = clothingMap[outfit.id] ?? [];
+
+                return Container(
+                  width: 110,
+                  margin: const EdgeInsets.only(right: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Column(
+                      children: [
+                        // Miniature grid of the clothes in this outfit
+                        Expanded(
+                          child: clothes.isEmpty
+                              ? Container(
+                                  color: Colors.grey.shade100,
+                                  child: const Center(
+                                    child: Icon(Icons.checkroom, color: Colors.grey),
+                                  ),
+                                )
+                              : GridView.builder(
+                                  padding: const EdgeInsets.all(4),
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    crossAxisSpacing: 4,
+                                    mainAxisSpacing: 4,
+                                    childAspectRatio: 1,
+                                  ),
+                                  itemCount: math.min(clothes.length, 4),
+                                  itemBuilder: (context, cIndex) {
+                                    return ClipRRect(
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: CachedNetworkImage(
+                                        imageUrl: clothes[cIndex].imageUrl,
+                                        fit: BoxFit.cover,
+                                        placeholder: (context, url) => Container(color: Colors.grey.shade100),
+                                        errorWidget: (context, url, error) => const Icon(Icons.error, size: 8),
+                                      ),
+                                    );
+                                  },
+                                ),
+                        ),
+                        // Match score badge
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          color: const Color(AppConstants.primaryColorValue).withOpacity(0.08),
+                          child: Center(
+                            child: Text(
+                              '${outfit.matchPercentage}% Fit',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color(AppConstants.primaryColorValue),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
-        ),
       ],
     );
   }

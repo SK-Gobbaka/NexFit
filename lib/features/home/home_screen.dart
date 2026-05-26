@@ -5,6 +5,7 @@ import '../../models/clothing.dart';
 import '../../models/outfit.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../../widgets/outfit_card.dart';
+import '../../services/outfit_service.dart';
 import '../../utils/constants.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -40,12 +41,10 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   ];
 
-  final Outfit _todayOutfit = Outfit(
-    id: '1',
-    clothingIds: ['1', '2', '3'],
-    matchPercentage: 98,
-    createdAt: DateTime.now(),
-  );
+  // Dynamic getter fetching today's outfit from the central service database
+  Outfit get _todayOutfit {
+    return OutfitService.instance.outfits.firstWhere((o) => o.id == '1');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -136,6 +135,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTodayAIFit() {
+    final todayFit = _todayOutfit;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -151,12 +152,18 @@ class _HomeScreenState extends State<HomeScreen> {
         SizedBox(
           height: 280,
           child: OutfitCard(
-            outfit: _todayOutfit,
+            outfit: todayFit,
             clothingItems: _recentClothes,
             onSave: () {
               setState(() {
-                // Toggle save state
+                OutfitService.instance.toggleSave(todayFit.id);
               });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(!todayFit.isSaved ? 'Outfit saved!' : 'Outfit removed'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
             },
             onGenerateAgain: () => context.go('/outfit-generator'),
           ),

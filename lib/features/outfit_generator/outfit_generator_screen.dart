@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../models/clothing.dart';
 import '../../models/outfit.dart';
 import '../../widgets/outfit_card.dart';
 import '../../widgets/swipeable_outfit_stack.dart';
+import '../../services/outfit_service.dart';
 import '../../utils/constants.dart';
 
 class OutfitGeneratorScreen extends StatefulWidget {
@@ -22,89 +24,26 @@ class _OutfitGeneratorScreenState extends State<OutfitGeneratorScreen> {
   List<Outfit> _swipeOutfits = [];
   String _scanningStatus = 'Analyzing style profile...';
 
-  // Mock data for individual clothes to build combinations dynamically
+  // State maps initialized from singleton service
   late final Map<String, Clothing> _allClothing;
-
-  // Mock data for MVP (PageView)
   late final List<Outfit> _outfits;
   late final Map<String, List<Clothing>> _outfitClothingMap;
 
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
+    
+    // Connect to global OutfitService database
+    _outfits = OutfitService.instance.outfits;
+    _outfitClothingMap = OutfitService.instance.outfitClothingMap;
 
-    _allClothing = {
-      '1': Clothing(
-        id: '1',
-        imageUrl: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=400',
-        category: 'Upper Wear',
-        color: 'Beige',
-        createdAt: now,
-      ),
-      '2': Clothing(
-        id: '2',
-        imageUrl: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=400',
-        category: 'Lower Wear',
-        color: 'Blue',
-        createdAt: now,
-      ),
-      '3': Clothing(
-        id: '3',
-        imageUrl: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400',
-        category: 'Footwear',
-        color: 'Gray',
-        createdAt: now,
-      ),
-      '4': Clothing(
-        id: '4',
-        imageUrl: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400',
-        category: 'Upper Wear',
-        color: 'Black',
-        createdAt: now,
-      ),
-      '5': Clothing(
-        id: '5',
-        imageUrl: 'https://images.unsplash.com/photo-1584370848010-d7fe6bc767ec?w=400',
-        category: 'Lower Wear',
-        color: 'White',
-        createdAt: now,
-      ),
-      '6': Clothing(
-        id: '6',
-        imageUrl: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=400',
-        category: 'Footwear',
-        color: 'Brown',
-        createdAt: now,
-      ),
-    };
-
-    _outfits = [
-      Outfit(
-        id: '1',
-        clothingIds: ['1', '2', '3'],
-        matchPercentage: 98,
-        createdAt: now,
-      ),
-      Outfit(
-        id: '2',
-        clothingIds: ['4', '5', '6'],
-        matchPercentage: 92,
-        createdAt: now,
-      ),
-      Outfit(
-        id: '3',
-        clothingIds: ['1', '5', '3'],
-        matchPercentage: 85,
-        createdAt: now,
-      ),
-    ];
-
-    _outfitClothingMap = {
-      '1': [_allClothing['1']!, _allClothing['2']!, _allClothing['3']!],
-      '2': [_allClothing['4']!, _allClothing['5']!, _allClothing['6']!],
-      '3': [_allClothing['1']!, _allClothing['5']!, _allClothing['3']!],
-    };
+    // Build the clothing index map from the service mappings
+    _allClothing = {};
+    for (final clothesList in _outfitClothingMap.values) {
+      for (final item in clothesList) {
+        _allClothing[item.id] = item;
+      }
+    }
   }
 
   // Generates 5 unique outfits for Swipe Mode
@@ -143,7 +82,7 @@ class _OutfitGeneratorScreenState extends State<OutfitGeneratorScreen> {
       ),
     ];
 
-    // Map each swipe outfit to clothing items
+    // Map each swipe outfit to clothing items in the service
     _outfitClothingMap['s1'] = [_allClothing['1']!, _allClothing['5']!, _allClothing['3']!];
     _outfitClothingMap['s2'] = [_allClothing['4']!, _allClothing['2']!, _allClothing['6']!];
     _outfitClothingMap['s3'] = [_allClothing['1']!, _allClothing['2']!, _allClothing['6']!];
@@ -180,27 +119,16 @@ class _OutfitGeneratorScreenState extends State<OutfitGeneratorScreen> {
     });
   }
 
-  // Legacy page-view generator (not used but kept for references/fallbacks)
-  void _generateNewOutfit() {
-    setState(() {
-      _isGenerating = true;
-    });
-
-    Future.delayed(const Duration(seconds: 2), () {
-      setState(() {
-        _isGenerating = false;
-        _currentIndex = (_currentIndex + 1) % _outfits.length;
-        _pageController.animateToPage(
-          _currentIndex,
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-        );
-      });
-    });
-  }
-
   // Handles outfit saving from both standard list and Swipe Mode
   void _handleSwipeSave(Outfit outfit, bool isSaved) {
+    // 1. Sync with central OutfitService database
+    OutfitService.instance.saveOutfit(
+      outfit,
+      isSaved,
+      _outfitClothingMap[outfit.id] ?? [],
+    );
+
+    // 2. Refresh local UI state
     setState(() {
       // Keep isSaved flag in sync in standard outfits list
       for (int i = 0; i < _outfits.length; i++) {
@@ -237,6 +165,10 @@ class _OutfitGeneratorScreenState extends State<OutfitGeneratorScreen> {
   }
 
   void _saveOutfit(int index) {
+    // 1. Sync with central service database
+    OutfitService.instance.toggleSave(_outfits[index].id);
+
+    // 2. Refresh local UI state
     setState(() {
       _outfits[index] = _outfits[index].copyWith(isSaved: !_outfits[index].isSaved);
     });
@@ -324,7 +256,12 @@ class _OutfitGeneratorScreenState extends State<OutfitGeneratorScreen> {
                   _isSwipeMode = false;
                 });
               } else {
-                Navigator.pop(context);
+                // FIXED: If go_router context replacement leaves Navigator stack empty, fallback to context.go('/')
+                if (Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                } else {
+                  context.go('/');
+                }
               }
             },
           ),

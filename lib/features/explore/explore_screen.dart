@@ -16,6 +16,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedOccasion = 'All';
 
+  // State to track user's active likes on the Explore screen
+  final Set<String> _likedPostIds = {};
+
   // Mock data for MVP
   final List<Post> _posts = [
     Post(
@@ -286,22 +289,43 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.favorite_border,
-                      size: 16,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${post.likes ?? 0}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      if (_likedPostIds.contains(post.id)) {
+                        _likedPostIds.remove(post.id);
+                      } else {
+                        _likedPostIds.add(post.id);
+                      }
+                    });
+                  },
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _likedPostIds.contains(post.id)
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        size: 18,
+                        color: _likedPostIds.contains(post.id)
+                            ? Colors.red
+                            : Colors.grey.shade500,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Text(
+                        '${post.likes + (_likedPostIds.contains(post.id) ? 1 : 0)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _likedPostIds.contains(post.id)
+                              ? Colors.red.shade600
+                              : Colors.grey.shade600,
+                          fontWeight: _likedPostIds.contains(post.id)
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
